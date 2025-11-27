@@ -90,6 +90,17 @@ class StringConverter extends AbstractConverter
         return chrono.get(fieldSource, millis);
     }
 
+    private boolean verifyPTS(String format) {
+        if(format == null || format.length() < 4) {
+            return false;
+        }
+
+        boolean startsWith = format.regionMatches(true, 0, "PT", 0, 2);
+        boolean endsWith = format.regionMatches(true, format.length() - 1, "S", 0, 1);
+        
+        return startsWith && endsWith;
+    }
+
     //-----------------------------------------------------------------------
     /**
      * Gets the duration of the string using the standard type.
@@ -104,14 +115,11 @@ class StringConverter extends AbstractConverter
         String original = (String) object;
         String str = original;
         int len = str.length();
-        if (len >= 4 &&
-            (str.charAt(0) == 'P' || str.charAt(0) == 'p') &&
-            (str.charAt(1) == 'T' || str.charAt(1) == 't') &&
-            (str.charAt(len - 1) == 'S' || str.charAt(len - 1) == 's')) {
-            // ok
-        } else {
+
+        if(!verifyPTS(original)) {
             throw new IllegalArgumentException("Invalid format: \"" + original + '"');
         }
+
         str = str.substring(2, len - 1);
         int dot = -1;
         boolean negative = false;

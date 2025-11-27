@@ -251,12 +251,25 @@ public class DateTimeZoneBuilder {
                                           boolean advanceDayOfWeek,
                                           int millisOfDay)
     {
-        if (iRuleSets.size() > 0) {
-            OfYear ofYear = new OfYear
-                (mode, monthOfYear, dayOfMonth, dayOfWeek, advanceDayOfWeek, millisOfDay);
+        // if (iRuleSets.size() > 0) {
+        //     OfYear ofYear = new OfYear
+        //         (mode, monthOfYear, dayOfMonth, dayOfWeek, advanceDayOfWeek, millisOfDay);
+        //     RuleSet lastRuleSet = iRuleSets.get(iRuleSets.size() - 1);
+        //     lastRuleSet.setUpperLimit(year, ofYear);
+        // }
+
+        if(iRuleSets != null && !iRuleSets.isEmpty()) {
+            OfYear ofYear = new OfYear(mode,
+                                       monthOfYear, 
+                                       dayOfMonth,
+                                       dayOfWeek,
+                                       advanceDayOfWeek,
+                                       millisOfDay);
+            
             RuleSet lastRuleSet = iRuleSets.get(iRuleSets.size() - 1);
             lastRuleSet.setUpperLimit(year, ofYear);
         }
+
         iRuleSets.add(new RuleSet());
         return this;
     }
@@ -1294,6 +1307,11 @@ public class DateTimeZoneBuilder {
             return (start > end) ? end : start;
         }
 
+        private long handleOverflow(long instant, long computedValue) {
+            boolean overflow = (instant < 0 && computedValue > 0); // If it's True, then overflowed.
+            return overflow ? instant : computedValue;
+        }
+
         @Override
         public long previousTransition(long instant) {
             // Increment in order to handle the case where instant is exactly at
@@ -1307,34 +1325,20 @@ public class DateTimeZoneBuilder {
             long start, end;
 
             try {
-                start = startRecurrence.previous
-                    (instant, standardOffset, endRecurrence.getSaveMillis());
-                if (instant < 0 && start > 0) {
-                    // Overflowed.
-                    start = instant;
-                }
-            } catch (IllegalArgumentException e) {
-                // Overflowed.
-                start = instant;
-            } catch (ArithmeticException e) {
-                // Overflowed.
-                start = instant;
+                start = startRecurrence.previous(instant, standardOffset, endRecurrence.getSaveMillis());
+                start = handleOverflow(instant, start); // Overflowed.
+                
+            } catch (ArithmeticException | IllegalArgumentException e) {
+                start = instant; // Overflowed
             }
 
             try {
-                end = endRecurrence.previous
-                    (instant, standardOffset, startRecurrence.getSaveMillis());
-                if (instant < 0 && end > 0) {
-                    // Overflowed.
-                    end = instant;
-                }
-            } catch (IllegalArgumentException e) {
-                // Overflowed.
-                end = instant;
-            } catch (ArithmeticException e) {
-                // Overflowed.
-                end = instant;
-            }
+                end = endRecurrence.previous(instant, standardOffset, startRecurrence.getSaveMillis());
+                end = handleOverflow(instant, end); // Overflowed.
+
+            } catch (ArithmeticException | IllegalArgumentException  e) {
+                end = instant; // Overflowed.
+            } 
 
             return ((start > end) ? start : end) - 1;
         }
